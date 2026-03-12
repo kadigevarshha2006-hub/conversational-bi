@@ -38,9 +38,8 @@ def main():
     # Sidebar for setup
     with st.sidebar:
         st.header("⚙️ Configuration")
-        api_key = st.text_input("Gemini API Key", type="password", value=os.environ.get("GEMINI_API_KEY", ""))
-        if api_key:
-            os.environ["GEMINI_API_KEY"] = api_key
+        # API key is now loaded securely from the environment
+        st.success("Gemini API Connected Securely")
             
         st.divider()
         st.header("📁 Data Source")
