@@ -40,6 +40,24 @@ def main():
         st.header("⚙️ Configuration")
         # API key is now loaded securely from the environment
         st.success("Gemini API Connected Securely")
+        
+        st.divider()
+        st.header("🕒 Chat History")
+        
+        # Display previous prompts in the sidebar for easy viewing
+        if "messages" in st.session_state and len(st.session_state.messages) > 0:
+            user_questions = [msg["content"] for msg in st.session_state.messages if msg["role"] == "user"]
+            if user_questions:
+                for idx, q in enumerate(user_questions):
+                    st.caption(f"{idx + 1}. {q}")
+                
+                if st.button("Clear History"):
+                    st.session_state.messages = []
+                    st.rerun()
+            else:
+                st.info("No questions asked yet.")
+        else:
+            st.info("No questions asked yet.")
             
         st.divider()
         st.header("📁 Data Source")
@@ -114,19 +132,37 @@ def main():
                 # Setup model
                 model = genai.GenerativeModel('gemini-2.5-flash')
                 
+                # Build conversation history string
+                history_text = "No previous history."
+                if len(st.session_state.messages) > 1: # More than just current prompt
+                    history_lines = []
+                    for msg in st.session_state.messages[:-1]: # Exclude current
+                        role = msg["role"]
+                        content = msg["content"]
+                        # Truncate extremely long assistant code outputs to save tokens
+                        if role == "assistant" and len(content) > 200:
+                            content = content[:200] + "... [truncated]"
+                        history_lines.append(f"{role.capitalize()}: {content}") # type: ignore
+                    history_text = "\n".join(history_lines)
+                    
                 schema_context = get_dataframe_schema(st.session_state['df'])
-                
+
                 system_prompt = f"""
 You are a Python data wizard. The user wants to analyze a pandas DataFrame named `df`.
 Here is the schema of the DataFrame:
 {schema_context}
 
-The user's question is: "{prompt}"
+---
+PREVIOUS CONVERSATION HISTORY:
+{history_text}
+---
+
+The user's CURRENT question is: "{prompt}"
 
 Write a Python script that:
 1. Takes the existing DataFrame `df`.
-2. Performs data manipulation to answer the question.
-3. Uses `plotly.express` (imported as `px`) or `plotly.graph_objects` (imported as `go`) to create a helpful chart (assign the figure to a variable named `fig`). ONLY do this if a chart makes sense, otherwise leave `fig` as None.
+2. Performs data manipulation to answer the CURRENT question, taking into account the PREVIOUS CONVERSATION HISTORY if the current question is a follow-up (e.g., "Now filter that by East").
+3. Uses `plotly.express` (imported as `px`) or `plotly.graph_objects` (imported as `go`) to create a helpful chart (assign the figure to a variable named `fig`). ONLY do this if a chart makes sense for the CURRENT question, otherwise leave `fig` as None.
 4. Creates a string containing a short, simple business insight based on the answer (assign to a variable named `insight`).
   
 Return ONLY the raw python code to be executed, no markdown formatting or text around it. E.g:
