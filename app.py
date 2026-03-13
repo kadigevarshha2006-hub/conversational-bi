@@ -48,7 +48,7 @@ def display_login_page():
     
     with tab1:
         with st.form("login_form"):
-            l_username = st.text_input("Username")
+            l_username = st.text_input("Company Email Address")
             l_password = st.text_input("Password", type="password")
             submit_login = st.form_submit_button("Login")
             
@@ -61,12 +61,12 @@ def display_login_page():
                     st.success("Logged in successfully!")
                     st.rerun()
                 else:
-                    st.error("Invalid username or password.")
+                    st.error("Invalid email or password.")
                     
     with tab2:
         with st.form("signup_form"):
-            s_username = st.text_input("Choose a Username")
-            s_password = st.text_input("Choose a Password", type="password")
+            s_username = st.text_input("Company Email Address")
+            s_password = st.text_input("Choose a Strong Password", type="password")
             submit_signup = st.form_submit_button("Create Account")
             
             if submit_signup:

@@ -1,5 +1,19 @@
 import bcrypt
+import re
 from database import create_user, get_user
+
+def validate_email_format(email):
+    """Basic regex check for an email format."""
+    pattern = r'^[\w\.-]+@[\w\.-]+\.\w+$'
+    if not re.match(pattern, email):
+        raise ValueError("Invalid email format. Please provide a valid company email (e.g., user@company.com).")
+
+def validate_password_strength(password):
+    """Check if password is at least 8 characters and contains a number."""
+    if len(password) < 8:
+        raise ValueError("Password must be at least 8 characters long.")
+    if not any(char.isdigit() for char in password):
+        raise ValueError("Password must contain at least one number.")
 
 def hash_password(password):
     """Hash a password for storing."""
@@ -14,13 +28,16 @@ def verify_password(password, hashed_password):
 def register_user(username, password):
     """Registers a new user and returns their user ID. Raises Exception if username exists."""
     if not username or not password:
-        raise ValueError("Username and password are required")
+        raise ValueError("Email and password are required.")
+        
+    validate_email_format(username)
+    validate_password_strength(password)
         
     hashed = hash_password(password)
     user_id = create_user(username, hashed)
     
     if not user_id:
-        raise ValueError("Username already exists")
+        raise ValueError("An account with this email already exists.")
     
     return user_id
 
