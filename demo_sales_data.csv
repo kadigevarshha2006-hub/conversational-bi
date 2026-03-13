@@ -1,0 +1,21 @@
+Date,Region,Product_Category,Sales_Revenue,Units_Sold,Customer_Age
+2023-01-15,North,Electronics,1200.50,5,28
+2023-01-16,South,Clothing,450.00,10,35
+2023-01-17,East,Home Goods,800.75,3,42
+2023-01-18,West,Electronics,1500.00,6,25
+2023-01-19,North,Clothing,300.00,8,55
+2023-01-20,South,Electronics,950.25,4,30
+2023-01-21,East,Clothing,600.00,12,22
+2023-01-22,West,Home Goods,1100.00,5,48
+2023-02-01,North,Electronics,1350.00,6,29
+2023-02-05,South,Home Goods,750.50,3,38
+2023-02-10,East,Electronics,2100.00,8,31
+2023-02-15,West,Clothing,520.00,11,26
+2023-02-20,North,Home Goods,920.00,4,45
+2023-02-25,South,Electronics,1800.00,7,33
+2023-03-01,East,Clothing,410.00,9,27
+2023-03-05,West,Electronics,1650.00,6,34
+2023-03-10,North,Clothing,380.00,8,51
+2023-03-15,South,Home Goods,890.00,4,39
+2023-03-20,East,Electronics,1950.00,8,29
+2023-03-25,West,Home Goods,1250.00,5,44

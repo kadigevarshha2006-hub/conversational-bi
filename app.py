@@ -46,7 +46,7 @@ def main():
         uploaded_file = st.file_uploader("Upload your dataset (CSV)", type=['csv'])
         
         # We can also load a default dataset if none is uploaded (for the hackathon demo)
-        use_default = st.checkbox("Use Demo Dataset", value=False)
+        use_default = st.checkbox("Use Demo Dataset", value=True)
 
     # Main content area
     if uploaded_file is not None:
@@ -66,18 +66,11 @@ def main():
             st.error(f"Error loading file: {e}")
     elif use_default:
         # Load the provided dataset
-        default_path = "dataset/5. Customer Behaviour (Online vs Offline)/Customer Behaviour (Online vs Offline).csv"
+        default_path = "demo_sales_data.csv"
         try:
             df = pd.read_csv(default_path, encoding='utf-8')
             st.session_state['df'] = df
             st.success("Demo dataset loaded successfully!")
-        except UnicodeDecodeError:
-            try:
-                df = pd.read_csv(default_path, encoding='latin1')
-                st.session_state['df'] = df
-                st.success("Demo dataset loaded successfully!")
-            except Exception as e:
-                st.error(f"Error loading demo dataset (encoding): {e}")
         except Exception as e:
             st.error(f"Error loading demo dataset: {e}")
 
