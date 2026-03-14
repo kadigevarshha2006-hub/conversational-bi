@@ -148,6 +148,29 @@ st.markdown("""
 # Initialize database on app start
 database.init_db()
 
+import re
+import resend
+import random
+
+def is_valid_email(email):
+    # Basic regex for standard email formats
+    pattern = r"^[a-zA-Z0-4_.-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
+    return re.match(pattern, email) is not None
+
+def send_otp_email(email, otp):
+    resend.api_key = os.environ.get("RESEND_API_KEY")
+    try:
+        r = resend.Emails.send({
+            "from": "Conversational BI <onboarding@resend.dev>",
+            "to": email,
+            "subject": "Your Verification Code",
+            "html": f"<p>Your 6-digit verification code is: <strong>{otp}</strong></p>"
+        })
+        return True
+    except Exception as e:
+        print(f"Error sending email: {e}")
+        return False
+
 def display_login_page():
     # Center the login form
     col1, col2, col3 = st.columns([1, 2, 1])
@@ -165,32 +188,97 @@ def display_login_page():
                 submit_login = st.form_submit_button("Login")
                 
                 if submit_login:
-                    user_id = auth.authenticate_user(l_username, l_password)
-                    if user_id:
-                        st.session_state['user_id'] = user_id
-                        st.session_state['username'] = l_username
-                        st.session_state['session_id'] = None
-                        st.success("Logged in successfully!")
-                        st.rerun()
+                    if not is_valid_email(l_username):
+                        st.error("Please enter a valid email address format.")
                     else:
-                        st.error("Invalid email or password.")
-                        
+                        user_id = auth.authenticate_user(l_username, l_password)
+                        if user_id:
+                            st.session_state['user_id'] = user_id
+                            st.session_state['username'] = l_username
+                            st.session_state['session_id'] = None
+                            st.success("Logged in successfully!")
+                            st.rerun()
+                        else:
+                            st.error("Invalid email or password.")
+                            
         with tab2:
-            with st.form("signup_form"):
-                s_username = st.text_input("Company Email Address", placeholder="name@company.com")
-                s_password = st.text_input("Choose a Strong Password", type="password", placeholder="••••••••")
-                submit_signup = st.form_submit_button("Create Account")
-                
-                if submit_signup:
-                    try:
-                        user_id = auth.register_user(s_username, s_password)
-                        st.session_state['user_id'] = user_id
-                        st.session_state['username'] = s_username
-                        st.session_state['session_id'] = None
-                        st.success("Account created successfully! Logging in...")
+            if 'expected_otp' not in st.session_state:
+                st.session_state['expected_otp'] = None
+            
+            if st.session_state['expected_otp'] is None:
+                with st.form("signup_form"):
+                    s_username = st.text_input("Company Email Address", placeholder="name@company.com")
+                    s_password = st.text_input("Choose a Strong Password", type="password", placeholder="••••••••")
+                    submit_signup = st.form_submit_button("Send Verification Code")
+                    
+                    if submit_signup:
+                        if not is_valid_email(s_username):
+                            st.error("Please enter a valid email address format to sign up.")
+                        elif len(s_password) < 6:
+                            st.error("Password must be at least 6 characters long.")
+                        else:
+                            # Generate OTP
+                            otp = str(random.randint(100000, 999999))
+                            
+                            # Check if Resend API key is present
+                            if not os.environ.get("RESEND_API_KEY"):
+                                st.error("RESEND_API_KEY not configured. Cannot send verification email.")
+                            elif auth.get_user(s_username): 
+                                # Use auth to check if user exists (assuming `get_user` is in auth.py or database.py, actually let's just let register fail later or check DB)
+                                # Assuming database.get_user exists based on typical auth.py implementation:
+                                user_exists = database.get_user(s_username)
+                                if user_exists:
+                                    st.error("Email is already registered.")
+                                else:
+                                    if send_otp_email(s_username, otp):
+                                        st.session_state['expected_otp'] = otp
+                                        st.session_state['pending_username'] = s_username
+                                        st.session_state['pending_password'] = s_password
+                                        st.success("Verification code sent to your email!")
+                                        st.rerun()
+                                    else:
+                                        st.error("Failed to send verification email. Please try again.")
+                            else:
+                                if send_otp_email(s_username, otp):
+                                    st.session_state['expected_otp'] = otp
+                                    st.session_state['pending_username'] = s_username
+                                    st.session_state['pending_password'] = s_password
+                                    st.success("Verification code sent to your email!")
+                                    st.rerun()
+                                else:
+                                    st.error("Failed to send verification email.")
+            else:
+                with st.form("otp_form"):
+                    st.info(f"An email with a 6-digit code was sent to {st.session_state.get('pending_username')}")
+                    entered_otp = st.text_input("Enter 6-digit Verification Code")
+                    col_submit, col_cancel = st.columns([1, 1])
+                    with col_submit:
+                        verify_submit = st.form_submit_button("Verify & Create Account")
+                    with col_cancel:
+                        cancel_submit = st.form_submit_button("Cancel")
+                    
+                    if verify_submit:
+                        if entered_otp == st.session_state['expected_otp']:
+                            try:
+                                user_id = auth.register_user(st.session_state['pending_username'], st.session_state['pending_password'])
+                                st.session_state['user_id'] = user_id
+                                st.session_state['username'] = st.session_state['pending_username']
+                                st.session_state['session_id'] = None
+                                
+                                # Clear pending state
+                                st.session_state['expected_otp'] = None
+                                st.session_state.pop('pending_username', None)
+                                st.session_state.pop('pending_password', None)
+                                
+                                st.success("Account created successfully! Logging in...")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(str(e))
+                        else:
+                            st.error("Incorrect verification code. Please try again.")
+                    elif cancel_submit:
+                        st.session_state['expected_otp'] = None
                         st.rerun()
-                    except Exception as e:
-                        st.error(str(e))
 
 def render_sidebar():
     with st.sidebar:
