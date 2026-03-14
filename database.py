@@ -1,27 +1,55 @@
-import sqlite3
 import os
+import sqlite3
+import psycopg2
+from psycopg2.extras import RealDictCursor
 from contextlib import contextmanager
-import json
 
 DB_FILE = "conversational_bi.db"
+# Check if we are running in the cloud (Render) with a PostgreSQL database URL
+DATABASE_URL = os.environ.get("DATABASE_URL")
+IS_POSTGRES = DATABASE_URL is not None
 
 @contextmanager
 def get_db_connection():
-    conn = sqlite3.connect(DB_FILE)
-    conn.row_factory = sqlite3.Row
-    try:
-        yield conn
-    finally:
-        conn.close()
+    if IS_POSTGRES:
+        conn = psycopg2.connect(DATABASE_URL)
+        try:
+            yield conn
+        finally:
+            conn.close()
+    else:
+        conn = sqlite3.connect(DB_FILE)
+        conn.row_factory = sqlite3.Row
+        try:
+            yield conn
+        finally:
+            conn.close()
+
+def get_cursor(conn):
+    if IS_POSTGRES:
+        return conn.cursor(cursor_factory=RealDictCursor)
+    else:
+        return conn.cursor()
+
+def p(query):
+    """ Helper to handle SQL placeholders (psycopg2 uses %s, sqlite uses ?) """
+    if IS_POSTGRES:
+        return query.replace('?', '%s')
+    return query
 
 def init_db():
     with get_db_connection() as conn:
-        cursor = conn.cursor()
+        cursor = get_cursor(conn)
         
         # User Authentication Table
-        cursor.execute('''
+        auto_inc = "SERIAL" if IS_POSTGRES else "INTEGER PRIMARY KEY AUTOINCREMENT"
+        pk_sql = f"id {auto_inc}" if IS_POSTGRES else f"id {auto_inc}"
+        if IS_POSTGRES:
+            pk_sql = "id SERIAL PRIMARY KEY"
+            
+        cursor.execute(f'''
             CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                {pk_sql},
                 username TEXT UNIQUE NOT NULL,
                 password_hash TEXT NOT NULL
             )
@@ -39,9 +67,9 @@ def init_db():
         ''')
         
         # Messages inside a Session Table
-        cursor.execute('''
+        cursor.execute(f'''
             CREATE TABLE IF NOT EXISTS messages (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                {pk_sql},
                 session_id TEXT NOT NULL,
                 role TEXT NOT NULL,
                 content TEXT NOT NULL,
@@ -58,67 +86,75 @@ def init_db():
 
 def create_user(username, password_hash):
     with get_db_connection() as conn:
-        cursor = conn.cursor()
+        cursor = get_cursor(conn)
         try:
-            cursor.execute("INSERT INTO users (username, password_hash) VALUES (?, ?)", (username, password_hash))
+            if IS_POSTGRES:
+                cursor.execute("INSERT INTO users (username, password_hash) VALUES (%s, %s) RETURNING id", (username, password_hash))
+                user_id = cursor.fetchone()['id']
+            else:
+                cursor.execute("INSERT INTO users (username, password_hash) VALUES (?, ?)", (username, password_hash))
+                user_id = cursor.lastrowid
             conn.commit()
-            return cursor.lastrowid
-        except sqlite3.IntegrityError:
-            return None # Username already exists
+            return user_id
+        except Exception as e:
+            # Handle unique constraint violation for duplicate username
+            if "UNIQUE" in str(e).upper() or "UNIQUE CONSTRAINT" in str(e).upper():
+                 return None
+            return None
 
 def get_user(username):
     with get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM users WHERE username = ?", (username,))
+        cursor = get_cursor(conn)
+        cursor.execute(p("SELECT * FROM users WHERE username = ?"), (username,))
         return cursor.fetchone()
 
 def create_chat_session(session_id, user_id, title="New Chat"):
     with get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute("INSERT INTO chat_sessions (id, user_id, title) VALUES (?, ?, ?)", (session_id, user_id, title))
+        cursor = get_cursor(conn)
+        cursor.execute(p("INSERT INTO chat_sessions (id, user_id, title) VALUES (?, ?, ?)"), (session_id, user_id, title))
         conn.commit()
 
 def get_user_sessions(user_id):
     with get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM chat_sessions WHERE user_id = ? ORDER BY created_at DESC", (user_id,))
+        cursor = get_cursor(conn)
+        cursor.execute(p("SELECT * FROM chat_sessions WHERE user_id = ? ORDER BY created_at DESC"), (user_id,))
         return cursor.fetchall()
 
 def rename_chat_session(session_id, title):
      with get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute("UPDATE chat_sessions SET title = ? WHERE id = ?", (title, session_id))
+        cursor = get_cursor(conn)
+        cursor.execute(p("UPDATE chat_sessions SET title = ? WHERE id = ?"), (title, session_id))
         conn.commit()
 
 def delete_chat_session(session_id):
     with get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM chat_sessions WHERE id = ?", (session_id,))
+        cursor = get_cursor(conn)
+        cursor.execute(p("DELETE FROM chat_sessions WHERE id = ?"), (session_id,))
         conn.commit()
 
 def save_message(session_id, role, content, chart_json=None, insight=None):
     with get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute('''
+        cursor = get_cursor(conn)
+        cursor.execute(p('''
             INSERT INTO messages (session_id, role, content, chart_json, insight)
             VALUES (?, ?, ?, ?, ?)
-        ''', (session_id, role, content, chart_json, insight))
+        '''), (session_id, role, content, chart_json, insight))
         conn.commit()
 
 def get_session_messages(session_id):
     with get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM messages WHERE session_id = ? ORDER BY created_at ASC", (session_id,))
+        cursor = get_cursor(conn)
+        cursor.execute(p("SELECT * FROM messages WHERE session_id = ? ORDER BY created_at ASC"), (session_id,))
         rows = cursor.fetchall()
         
         messages = []
         for row in rows:
+            # When using psycopg2 RealDictRow, dictionary access works like sqlite3.Row
             msg = {
                 "role": row["role"],
                 "content": row["content"]
             }
             if row["chart_json"]:
-                # The chart_json will be a string serialized by plotly.io in app.py
                 msg["chart_json"] = row["chart_json"]
             if row["insight"]:
                 msg["insight"] = row["insight"]
@@ -127,4 +163,4 @@ def get_session_messages(session_id):
 
 if __name__ == "__main__":
     init_db()
-    print("Database Initialized.")
+    print(f"Database Initialized. Using PostgreSQL: {IS_POSTGRES}")
