@@ -154,7 +154,7 @@ import random
 
 def is_valid_email(email):
     # Basic regex for standard email formats
-    pattern = r"^[a-zA-Z0-4_.-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
+    pattern = r"^[a-zA-Z0-9_.-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
     return re.match(pattern, email) is not None
 
 def send_otp_email(email, otp):
