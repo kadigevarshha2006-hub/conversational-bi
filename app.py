@@ -20,19 +20,130 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for better aesthetics
+# Custom CSS for modern, simple, and attractive aesthetics
 st.markdown("""
 <style>
-    .main .block-container {
-        padding-top: 2rem;
-        padding-bottom: 2rem;
-    }
-    h1 {
-        color: #1E3A8A;
+    /* Global Font Settings */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    
+    html, body, [class*="st-"] {
         font-family: 'Inter', sans-serif;
     }
+
+    /* Main Container Padding */
+    .main .block-container {
+        padding-top: 2rem;
+        padding-bottom: 3rem;
+        max-width: 1000px; /* Keep chat centered and readable */
+    }
+
+    /* Typography */
+    h1 {
+        color: #1a1a2e; /* Darker blue/grey for titles */
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    
+    h2, h3 {
+        color: #3f3d56;
+        font-weight: 600;
+    }
+    
+    p {
+        color: #4b5563;
+        line-height: 1.6;
+    }
+
+    /* Primary Accent Colors & Buttons */
+    div.stButton > button:first-child {
+        background-color: #4F46E5; /* Indigo accent */
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.1), 0 2px 4px -1px rgba(79, 70, 229, 0.06);
+    }
+    
+    div.stButton > button:first-child:hover {
+        background-color: #4338CA;
+        transform: translateY(-1px);
+        box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.1), 0 4px 6px -2px rgba(79, 70, 229, 0.05);
+    }
+
+    /* Sidebar Styling */
+    section[data-testid="stSidebar"] {
+        background-color: #f8fafc;
+        border-right: 1px solid #e2e8f0;
+    }
+    
+    .stSidebar .stButton button[kind="secondary"] {
+        background-color: white;
+        color: #334155;
+        border: 1px solid #cbd5e1;
+        text-align: left;
+        justify-content: flex-start;
+    }
+    
+    .stSidebar .stButton button[kind="secondary"]:hover {
+        background-color: #f1f5f9;
+        border-color: #94a3b8;
+    }
+
+    /* Inputs (Text, Password) */
+    .stTextInput input {
+        border-radius: 8px;
+        border: 1px solid #cbd5e1;
+        padding: 0.75rem;
+        transition: border-color 0.2s;
+    }
+    
+    .stTextInput input:focus {
+        border-color: #4F46E5;
+        box-shadow: 0 0 0 1px #4F46E5;
+    }
+
+    /* Chat Input */
     .stChatInput {
-        padding-bottom: 1rem;
+        padding-bottom: 2rem;
+    }
+    
+    .stChatInputContainer {
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+
+    /* Chat Message Bubbles */
+    .stChatMessage {
+        background-color: #ffffff;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        border: 1px solid #f1f5f9;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+    }
+    
+    [data-testid="stChatMessageContent"] {
+        color: #1e293b;
+    }
+
+    /* Highlight Assistant message slightly */
+    div[data-testid="stChatMessage"]:has(div[data-testid="chatAvatarIcon-assistant"]) {
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+    }
+
+    /* Info Alerts */
+    .stAlert {
+        border-radius: 8px;
+        border: none;
+    }
+    
+    /* Tabs */
+    button[data-baseweb="tab"] {
+        font-weight: 500;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -41,44 +152,49 @@ st.markdown("""
 database.init_db()
 
 def display_login_page():
-    st.title("🔐 Login to Conversational BI")
-    st.markdown("Please log in or sign up to access your secure, permanent chat sessions.")
+    # Center the login form
+    col1, col2, col3 = st.columns([1, 2, 1])
     
-    tab1, tab2 = st.tabs(["Login", "Sign Up"])
-    
-    with tab1:
-        with st.form("login_form"):
-            l_username = st.text_input("Company Email Address")
-            l_password = st.text_input("Password", type="password")
-            submit_login = st.form_submit_button("Login")
-            
-            if submit_login:
-                user_id = auth.authenticate_user(l_username, l_password)
-                if user_id:
-                    st.session_state['user_id'] = user_id
-                    st.session_state['username'] = l_username
-                    st.session_state['session_id'] = None
-                    st.success("Logged in successfully!")
-                    st.rerun()
-                else:
-                    st.error("Invalid email or password.")
-                    
-    with tab2:
-        with st.form("signup_form"):
-            s_username = st.text_input("Company Email Address")
-            s_password = st.text_input("Choose a Strong Password", type="password")
-            submit_signup = st.form_submit_button("Create Account")
-            
-            if submit_signup:
-                try:
-                    user_id = auth.register_user(s_username, s_password)
-                    st.session_state['user_id'] = user_id
-                    st.session_state['username'] = s_username
-                    st.session_state['session_id'] = None
-                    st.success("Account created successfully! Logging in...")
-                    st.rerun()
-                except Exception as e:
-                    st.error(str(e))
+    with col2:
+        st.title("🔐 Login to Conversational BI")
+        st.markdown("Please log in or sign up to access your secure, permanent chat sessions.")
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        tab1, tab2 = st.tabs(["Login", "Sign Up"])
+        
+        with tab1:
+            with st.form("login_form"):
+                l_username = st.text_input("Company Email Address", placeholder="name@company.com")
+                l_password = st.text_input("Password", type="password", placeholder="••••••••")
+                submit_login = st.form_submit_button("Login")
+                
+                if submit_login:
+                    user_id = auth.authenticate_user(l_username, l_password)
+                    if user_id:
+                        st.session_state['user_id'] = user_id
+                        st.session_state['username'] = l_username
+                        st.session_state['session_id'] = None
+                        st.success("Logged in successfully!")
+                        st.rerun()
+                    else:
+                        st.error("Invalid email or password.")
+                        
+        with tab2:
+            with st.form("signup_form"):
+                s_username = st.text_input("Company Email Address", placeholder="name@company.com")
+                s_password = st.text_input("Choose a Strong Password", type="password", placeholder="••••••••")
+                submit_signup = st.form_submit_button("Create Account")
+                
+                if submit_signup:
+                    try:
+                        user_id = auth.register_user(s_username, s_password)
+                        st.session_state['user_id'] = user_id
+                        st.session_state['username'] = s_username
+                        st.session_state['session_id'] = None
+                        st.success("Account created successfully! Logging in...")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(str(e))
 
 def render_sidebar():
     with st.sidebar:
@@ -95,7 +211,7 @@ def render_sidebar():
         st.header("🕒 Your Chat Sessions")
         
         # New Chat Button
-        if st.button("Start New Analysis", use_container_width=True, type="primary"):
+        if st.button("✨ Start New Analysis", use_container_width=True, type="primary"):
             st.session_state['session_id'] = None
             st.session_state['messages'] = []
             st.rerun()
@@ -103,7 +219,7 @@ def render_sidebar():
         sessions = database.get_user_sessions(st.session_state['user_id'])
         
         if not sessions:
-            st.info("No saved sessions yet.")
+            st.info("No saved sessions yet. Start a new analysis!")
         else:
             for s in sessions:
                 # Add a container so we can put a delete button next to it
@@ -111,7 +227,9 @@ def render_sidebar():
                 with col1:
                     is_active = st.session_state.get('session_id') == s['id']
                     btn_type = "primary" if is_active else "secondary"
-                    if st.button(s['title'], key=f"sel_{s['id']}", use_container_width=True, type=btn_type):
+                    # Add simple icon prefix for visual appeal
+                    icon = "💬 " if is_active else "📄 "
+                    if st.button(icon + s['title'], key=f"sel_{s['id']}", use_container_width=True, type=btn_type):
                         st.session_state['session_id'] = s['id']
                         # Load messages
                         msgs = database.get_session_messages(s['id'])
@@ -125,7 +243,7 @@ def render_sidebar():
                         st.session_state['messages'] = msgs
                         st.rerun()
                 with col2:
-                    if st.button("x", key=f"del_{s['id']}"):
+                    if st.button("🗑️", key=f"del_{s['id']}"):
                         database.delete_chat_session(s['id'])
                         if st.session_state.get('session_id') == s['id']:
                             st.session_state['session_id'] = None
@@ -142,6 +260,8 @@ def display_main_app():
     uploaded_file, use_default = render_sidebar()
     
     st.title("📊 Conversational AI for Instant BI")
+    st.markdown("Ask natural language questions to analyze your structured data instantly.")
+    st.divider()
     
     # Load data
     if uploaded_file is not None:
@@ -157,18 +277,18 @@ def display_main_app():
              st.warning("Could not load demo dataset. Please upload one.")
 
     if 'df' not in st.session_state:
-        st.info("Please upload a CSV file or check 'Use Demo Dataset' to begin.")
+        st.info("Please upload a CSV file or check 'Use Demo Dataset' to begin your analysis.")
         return
 
     # Initialize current session if none
     if "messages" not in st.session_state:
         st.session_state.messages = []
         
-    with st.expander("Preview Dataset"):
-        st.dataframe(st.session_state['df'].head())
-        st.caption(f"Total Rows: {len(st.session_state['df'])}, Columns: {len(st.session_state['df'].columns)}")
+    with st.expander("🔍 Preview Dataset", expanded=False):
+        st.dataframe(st.session_state['df'].head(), use_container_width=True)
+        st.caption(f"**Total Rows:** {len(st.session_state['df'])}, **Columns:** {len(st.session_state['df'].columns)}")
 
-    st.divider()
+    st.markdown("<br>", unsafe_allow_html=True)
     
     # Render historical messages in UI
     for message in st.session_state.messages:
