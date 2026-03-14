@@ -26,8 +26,14 @@ st.markdown("""
     /* Global Font Settings */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     
-    html, body, [class*="st-"] {
+    /* Apply Inter font carefully, avoiding icon overrides */
+    html, body, .stApp, p, h1, h2, h3, h4, h5, h6, span {
         font-family: 'Inter', sans-serif;
+    }
+    
+    /* Revert Material font specifically for Streamlit icons */
+    .stIcon, [class*="stIcon"], .material-icons {
+        font-family: 'Material Icons', 'Material Icons Round', 'Material Symbols Outlined', 'Material Symbols Rounded' !important;
     }
 
     /* Main Container with vibrant gradient and glassmorphism */
@@ -52,15 +58,20 @@ st.markdown("""
     }
     
     /* Glassmorphism containers (forms, expanders) */
-    div[data-testid="stForm"], div[data-testid="stExpander"] {
+    div[data-testid="stForm"], div[data-testid="stExpander"] > details {
         background: rgba(30, 41, 59, 0.4) !important;
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
         border: 1px solid rgba(255, 255, 255, 0.1) !important;
         border-radius: 16px !important;
         box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+    }
+    
+    div[data-testid="stForm"] {
         padding: 1rem;
     }
+
+    div.stButton > button:first-child {
         background-color: #4F46E5;
         color: white;
         border: none;
