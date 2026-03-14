@@ -30,33 +30,38 @@ st.markdown("""
         font-family: 'Inter', sans-serif;
     }
 
-    /* Main Container Padding */
+    /* Main Container with vibrant gradient and glassmorphism */
+    [data-testid="stAppViewContainer"] {
+        background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%);
+        color: #f8fafc;
+    }
+    
     .main .block-container {
         padding-top: 2rem;
         padding-bottom: 3rem;
-        max-width: 1000px; /* Keep chat centered and readable */
+        max-width: 1000px;
     }
-
-    /* Typography */
+    
+    /* Headers with vibrant gradient text */
     h1 {
-        color: #1a1a2e; /* Darker blue/grey for titles */
-        font-weight: 700;
+        background: -webkit-linear-gradient(45deg, #38bdf8, #818cf8, #c084fc);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-weight: 800;
         margin-bottom: 0.5rem;
     }
     
-    h2, h3 {
-        color: #3f3d56;
-        font-weight: 600;
+    /* Glassmorphism containers (forms, expanders) */
+    div[data-testid="stForm"], div[data-testid="stExpander"] {
+        background: rgba(30, 41, 59, 0.4) !important;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 16px !important;
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        padding: 1rem;
     }
-    
-    p {
-        color: #4b5563;
-        line-height: 1.6;
-    }
-
-    /* Primary Accent Colors & Buttons */
-    div.stButton > button:first-child {
-        background-color: #4F46E5; /* Indigo accent */
+        background-color: #4F46E5;
         color: white;
         border: none;
         border-radius: 8px;
@@ -74,13 +79,10 @@ st.markdown("""
 
     /* Sidebar Styling */
     section[data-testid="stSidebar"] {
-        background-color: #f8fafc;
         border-right: 1px solid #e2e8f0;
     }
     
     .stSidebar .stButton button[kind="secondary"] {
-        background-color: white;
-        color: #334155;
         border: 1px solid #cbd5e1;
         text-align: left;
         justify-content: flex-start;
@@ -103,6 +105,12 @@ st.markdown("""
         border-color: #4F46E5;
         box-shadow: 0 0 0 1px #4F46E5;
     }
+    
+    /* Hide native browser password reveal button to prevent double eye icons */
+    input[type="password"]::-ms-reveal,
+    input[type="password"]::-ms-clear {
+        display: none;
+    }
 
     /* Chat Input */
     .stChatInput {
@@ -117,22 +125,11 @@ st.markdown("""
 
     /* Chat Message Bubbles */
     .stChatMessage {
-        background-color: #ffffff;
         border-radius: 12px;
         padding: 1.5rem;
         margin-bottom: 1rem;
         border: 1px solid #f1f5f9;
         box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
-    }
-    
-    [data-testid="stChatMessageContent"] {
-        color: #1e293b;
-    }
-
-    /* Highlight Assistant message slightly */
-    div[data-testid="stChatMessage"]:has(div[data-testid="chatAvatarIcon-assistant"]) {
-        background-color: #f8fafc;
-        border: 1px solid #e2e8f0;
     }
 
     /* Info Alerts */
@@ -157,7 +154,6 @@ def display_login_page():
     
     with col2:
         st.title("🔐 Login to Conversational BI")
-        st.markdown("Please log in or sign up to access your secure, permanent chat sessions.")
         st.markdown("<br>", unsafe_allow_html=True)
         
         tab1, tab2 = st.tabs(["Login", "Sign Up"])
@@ -260,8 +256,6 @@ def display_main_app():
     uploaded_file, use_default = render_sidebar()
     
     st.title("📊 Conversational AI for Instant BI")
-    st.markdown("Ask natural language questions to analyze your structured data instantly.")
-    st.divider()
     
     # Load data
     if uploaded_file is not None:
@@ -284,7 +278,7 @@ def display_main_app():
     if "messages" not in st.session_state:
         st.session_state.messages = []
         
-    with st.expander("🔍 Preview Dataset", expanded=False):
+    with st.expander("Preview Dataset", expanded=False):
         st.dataframe(st.session_state['df'].head(), use_container_width=True)
         st.caption(f"**Total Rows:** {len(st.session_state['df'])}, **Columns:** {len(st.session_state['df'].columns)}")
 
