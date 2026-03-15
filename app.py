@@ -260,14 +260,14 @@ def display_login_page():
                                         st.session_state['expected_otp'] = otp
                                         st.session_state['pending_username'] = s_username
                                         st.session_state['pending_password'] = s_password
+                                        st.session_state['email_error'] = None
                                         st.success("Verification code sent to your email!")
                                         st.rerun()
                                     else:
-                                        st.warning(f"Note (Render Limitation): Email couldn't be sent automatically. Your Verification Code is: {otp}")
                                         st.session_state['expected_otp'] = otp
                                         st.session_state['pending_username'] = s_username
                                         st.session_state['pending_password'] = s_password
-                                        # Use a small wait or direct rerun depending on preference. Here we just set state so the user can verify
+                                        st.session_state['email_error'] = f"SendGrid Error: {err_msg}"
                                         st.rerun()
                             else:
                                 success, err_msg = send_otp_email(s_username, otp)
@@ -275,17 +275,22 @@ def display_login_page():
                                     st.session_state['expected_otp'] = otp
                                     st.session_state['pending_username'] = s_username
                                     st.session_state['pending_password'] = s_password
+                                    st.session_state['email_error'] = None
                                     st.success("Verification code sent to your email!")
                                     st.rerun()
                                 else:
-                                    st.warning(f"Note (Render Limitation): Email couldn't be sent automatically. Your Verification Code is: {otp}")
                                     st.session_state['expected_otp'] = otp
                                     st.session_state['pending_username'] = s_username
                                     st.session_state['pending_password'] = s_password
+                                    st.session_state['email_error'] = f"SendGrid Error: {err_msg}"
                                     st.rerun()
             else:
-                with st.form("otp_form"):
+                if 'email_error' in st.session_state and st.session_state['email_error']:
+                    st.warning(f"{st.session_state['email_error']}. Note (Render Limitation): Your Verification Code is: {st.session_state['expected_otp']}")
+                else:
                     st.info(f"An email with a 6-digit code was sent to {st.session_state.get('pending_username')}")
+                
+                with st.form("otp_form"):
                     entered_otp = st.text_input("Enter 6-digit Verification Code")
                     col_submit, col_cancel = st.columns([1, 1])
                     with col_submit:
