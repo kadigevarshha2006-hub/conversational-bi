@@ -288,7 +288,7 @@ def display_login_page():
                 if 'email_error' in st.session_state and st.session_state['email_error']:
                     st.warning(f"{st.session_state['email_error']}. Note (Render Limitation): Your Verification Code is: {st.session_state['expected_otp']}")
                 else:
-                    st.info(f"An email with a 6-digit code was sent to {st.session_state.get('pending_username')}")
+                    st.info(f"An email with a 6-digit code was sent to {st.session_state.get('pending_username')} (Demo Mode OTP: {st.session_state['expected_otp']})")
                 
                 with st.form("otp_form"):
                     entered_otp = st.text_input("Enter 6-digit Verification Code")
