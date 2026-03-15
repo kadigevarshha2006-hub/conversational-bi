@@ -188,13 +188,15 @@ def send_otp_email(email, otp):
     message.attach(part)
 
     try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+        with smtplib.SMTP("smtp.gmail.com", 587) as server:
+            server.ehlo()
+            server.starttls()
             server.login(sender_email, sender_password)
             server.sendmail(sender_email, email, message.as_string())
-        return True
+        return True, ""
     except Exception as e:
         print(f"Error sending email: {e}")
-        return False
+        return False, str(e)
 
 def display_login_page():
     # Center the login form
@@ -255,23 +257,25 @@ def display_login_page():
                                 if user_exists:
                                     st.error("Email is already registered.")
                                 else:
-                                    if send_otp_email(s_username, otp):
+                                    success, err_msg = send_otp_email(s_username, otp)
+                                    if success:
                                         st.session_state['expected_otp'] = otp
                                         st.session_state['pending_username'] = s_username
                                         st.session_state['pending_password'] = s_password
                                         st.success("Verification code sent to your email!")
                                         st.rerun()
                                     else:
-                                        st.error("Failed to send verification email. Please try again.")
+                                        st.error(f"Failed to send email. Error: {err_msg}")
                             else:
-                                if send_otp_email(s_username, otp):
+                                success, err_msg = send_otp_email(s_username, otp)
+                                if success:
                                     st.session_state['expected_otp'] = otp
                                     st.session_state['pending_username'] = s_username
                                     st.session_state['pending_password'] = s_password
                                     st.success("Verification code sent to your email!")
                                     st.rerun()
                                 else:
-                                    st.error("Failed to send verification email.")
+                                    st.error(f"Failed to send email. Error: {err_msg}")
             else:
                 with st.form("otp_form"):
                     st.info(f"An email with a 6-digit code was sent to {st.session_state.get('pending_username')}")
