@@ -160,9 +160,8 @@ st.markdown("""
 database.init_db()
 
 import re
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import sendgrid
+from sendgrid.helpers.mail import Mail, Email, To, Content
 import random
 
 def is_valid_email(email):
@@ -171,32 +170,31 @@ def is_valid_email(email):
     return re.match(pattern, email) is not None
 
 def send_otp_email(email, otp):
+    sendgrid_api_key = os.environ.get("SENDGRID_API_KEY")
     sender_email = os.environ.get("GMAIL_ADDRESS")
-    sender_password = os.environ.get("GMAIL_APP_PASSWORD")
     
-    if not sender_email or not sender_password:
-        print("Gmail credentials not configured.")
-        return False
+    if not sendgrid_api_key or not sender_email:
+        print("SendGrid credentials or Sender Email not configured.")
+        return False, "API Key or Sender Email missing"
 
-    message = MIMEMultipart("alternative")
-    message["Subject"] = "Your Verification Code"
-    message["From"] = f"Conversational BI <{sender_email}>"
-    message["To"] = email
-
-    html = f"<p>Your 6-digit verification code is: <strong>{otp}</strong></p>"
-    part = MIMEText(html, "html")
-    message.attach(part)
+    sg = sendgrid.SendGridAPIClient(api_key=sendgrid_api_key)
+    from_email = Email(sender_email, "Conversational BI")
+    to_email = To(email)
+    subject = "Your Verification Code"
+    content = Content("text/html", f"<p>Your 6-digit verification code is: <strong>{otp}</strong></p>")
+    
+    mail = Mail(from_email, to_email, subject, content)
 
     try:
-        with smtplib.SMTP("smtp.gmail.com", 587) as server:
-            server.ehlo()
-            server.starttls()
-            server.login(sender_email, sender_password)
-            server.sendmail(sender_email, email, message.as_string())
-        return True, ""
+        response = sg.client.mail.send.post(request_body=mail.get())
+        if response.status_code >= 200 and response.status_code < 300:
+            return True, ""
+        else:
+            return False, f"SendGrid API returned status {response.status_code}"
     except Exception as e:
         print(f"Error sending email: {e}")
         return False, str(e)
+
 
 def display_login_page():
     # Center the login form
@@ -265,7 +263,12 @@ def display_login_page():
                                         st.success("Verification code sent to your email!")
                                         st.rerun()
                                     else:
-                                        st.error(f"Failed to send email. Error: {err_msg}")
+                                        st.warning(f"Note (Render Limitation): Email couldn't be sent automatically. Your Verification Code is: {otp}")
+                                        st.session_state['expected_otp'] = otp
+                                        st.session_state['pending_username'] = s_username
+                                        st.session_state['pending_password'] = s_password
+                                        # Use a small wait or direct rerun depending on preference. Here we just set state so the user can verify
+                                        st.rerun()
                             else:
                                 success, err_msg = send_otp_email(s_username, otp)
                                 if success:
@@ -275,7 +278,11 @@ def display_login_page():
                                     st.success("Verification code sent to your email!")
                                     st.rerun()
                                 else:
-                                    st.error(f"Failed to send email. Error: {err_msg}")
+                                    st.warning(f"Note (Render Limitation): Email couldn't be sent automatically. Your Verification Code is: {otp}")
+                                    st.session_state['expected_otp'] = otp
+                                    st.session_state['pending_username'] = s_username
+                                    st.session_state['pending_password'] = s_password
+                                    st.rerun()
             else:
                 with st.form("otp_form"):
                     st.info(f"An email with a 6-digit code was sent to {st.session_state.get('pending_username')}")
