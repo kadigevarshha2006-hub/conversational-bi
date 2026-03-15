@@ -160,7 +160,9 @@ st.markdown("""
 database.init_db()
 
 import re
-import resend
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 import random
 
 def is_valid_email(email):
@@ -169,14 +171,26 @@ def is_valid_email(email):
     return re.match(pattern, email) is not None
 
 def send_otp_email(email, otp):
-    resend.api_key = os.environ.get("RESEND_API_KEY")
+    sender_email = os.environ.get("GMAIL_ADDRESS")
+    sender_password = os.environ.get("GMAIL_APP_PASSWORD")
+    
+    if not sender_email or not sender_password:
+        print("Gmail credentials not configured.")
+        return False
+
+    message = MIMEMultipart("alternative")
+    message["Subject"] = "Your Verification Code"
+    message["From"] = f"Conversational BI <{sender_email}>"
+    message["To"] = email
+
+    html = f"<p>Your 6-digit verification code is: <strong>{otp}</strong></p>"
+    part = MIMEText(html, "html")
+    message.attach(part)
+
     try:
-        r = resend.Emails.send({
-            "from": "Conversational BI <onboarding@resend.dev>",
-            "to": email,
-            "subject": "Your Verification Code",
-            "html": f"<p>Your 6-digit verification code is: <strong>{otp}</strong></p>"
-        })
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login(sender_email, sender_password)
+            server.sendmail(sender_email, email, message.as_string())
         return True
     except Exception as e:
         print(f"Error sending email: {e}")
@@ -231,9 +245,9 @@ def display_login_page():
                             # Generate OTP
                             otp = str(random.randint(100000, 999999))
                             
-                            # Check if Resend API key is present
-                            if not os.environ.get("RESEND_API_KEY"):
-                                st.error("RESEND_API_KEY not configured. Cannot send verification email.")
+                            # Check if Gmail credentials are present
+                            if not os.environ.get("GMAIL_ADDRESS") or not os.environ.get("GMAIL_APP_PASSWORD"):
+                                st.error("GMAIL_ADDRESS and GMAIL_APP_PASSWORD not configured. Cannot send verification email.")
                             elif auth.get_user(s_username): 
                                 # Use auth to check if user exists (assuming `get_user` is in auth.py or database.py, actually let's just let register fail later or check DB)
                                 # Assuming database.get_user exists based on typical auth.py implementation:
